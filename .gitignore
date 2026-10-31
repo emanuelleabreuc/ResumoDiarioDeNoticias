@@ -1,0 +1,9 @@
+#ambiente virtual
+.venv/
+#segredos
+.env
+#cache do python
+__pycache__/
+*.pyc
+#logs
+*.log

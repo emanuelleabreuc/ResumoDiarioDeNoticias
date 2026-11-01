@@ -10,11 +10,11 @@ from dotenv import load_dotenv
 from google import genai
 
 
-load_dotenv() #le as chaves do .env
+
 
 SETORES = {
-    "G1 tecnologia": "https://g1.globo.com/rss/g1/tecnologia/",
-    "G1 economia": "https://g1.globo.com/rss/g1/economia/",
+    "G1 tecnologia": ["https://g1.globo.com/rss/g1/tecnologia/"],
+    "G1 economia": ["https://g1.globo.com/rss/g1/economia/"],
 }
 
 VARIAVEIS_OBRIGATORIAS = [ "GEMINI_API_KEY" ]
@@ -44,7 +44,7 @@ def main():
     for nome, valor in segredos.items():
         print(f"  {nome}: carregada ({len(valor)} caracteres)")
 
-    print(f"\nFuso: {FUSO_HORARIO} | Envio às {HORARIO_ENVIO}")
+    print(f"\nFuso: {FUSO_HORARIO} | Envio às {HORARIO_DO_ENVIO}")
     print(f"Setores ({len(SETORES)}):")
     for setor, feeds in SETORES.items():
         print(f"  - {setor}: {len(feeds)} feed(s)")

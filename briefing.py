@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import os
 import sys
 import time
@@ -13,8 +14,8 @@ from google import genai
 
 
 SETORES = {
-    "G1 tecnologia": ["https://g1.globo.com/rss/g1/tecnologia/"],
-    "G1 economia": ["https://g1.globo.com/rss/g1/economia/"],
+    "Tecnologia": ["https://g1.globo.com/rss/g1/tecnologia/"],
+    "Economia": ["https://g1.globo.com/rss/g1/economia/"],
 }
 
 VARIAVEIS_OBRIGATORIAS = [ "GEMINI_API_KEY" ]
@@ -23,6 +24,20 @@ FUSO_HORARIO = ZoneInfo("America/Sao_Paulo")
 HORARIO_DO_ENVIO = "09:00"
 JANELA_HORAS = 24
 MAX_NOTICIAS_POR_SETOR = 5
+
+
+USER_AGENT = "ResumoDiarioDeNoticias/1.0 (projeto pessoal)"
+TIMEOUT = 10  # segundos
+PAUSA_ENTRE_FEEDS = 1  # segundos
+
+@dataclass
+class Noticia:
+    setor: str
+    titulo: str
+    link: str
+    resumo: str
+    fonte: str
+    publicada_em: time.struct_time | None
 
 
 
@@ -36,6 +51,17 @@ def carregar_segredos():
 
     return {nome: os.getenv(nome) for nome in VARIAVEIS_OBRIGATORIAS}
 
+
+def baixar_feed(url):
+    """Baixa e retorna o feed RSS como um objeto feedparser."""
+    try:
+        resposta = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=TIMEOUT)
+        resposta.raise_for_status()
+    except requests.RequestException as erro:
+        print(f"Erro ao baixar feed {url}: {erro}")
+        return None
+
+    return resposta.content
 
 def main():
     segredos = carregar_segredos()

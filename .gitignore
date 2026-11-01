@@ -1,5 +1,5 @@
 #ambiente virtual
-.venv/
+.venv
 #segredos
 .env
 #cache do python

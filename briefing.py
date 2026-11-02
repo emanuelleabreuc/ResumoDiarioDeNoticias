@@ -7,6 +7,8 @@ from zoneinfo import ZoneInfo
 
 import feedparser
 import requests
+import html
+import re
 from dotenv import load_dotenv
 from google import genai
 
@@ -24,6 +26,7 @@ FUSO_HORARIO = ZoneInfo("America/Sao_Paulo")
 HORARIO_DO_ENVIO = "09:00"
 JANELA_HORAS = 24
 MAX_NOTICIAS_POR_SETOR = 5
+MAX_CARACTERES_RESUMO = 300
 
 
 USER_AGENT = "ResumoDiarioDeNoticias/1.0 (projeto pessoal)"
@@ -151,6 +154,13 @@ def remover_duplicadas(noticias):
             vistas.add(chave)
             unicas.append(noticia)
     return unicas
+
+def limpar_html(texto):
+    """Remove tags e entidades HTML, junta espaços e corta o tamanho."""
+    sem_tags = re.sub(r"<[^>]+>", " ", texto)
+    sem_entidades = html.unescape(sem_tags)
+    limpo = " ".join(sem_entidades.split())
+    return limpo[:MAX_CARACTERES_RESUMO]
 
 
 

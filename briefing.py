@@ -42,7 +42,7 @@ class Noticia:
 
 
 def carregar_segredos():
-    """Lê o .env e encerra o programa se faltar alguma variável."""
+    """Lê o .env e encerra o programa se faltar alguma variável"""
     load_dotenv()
 
     faltando = [nome for nome in VARIAVEIS_OBRIGATORIAS if not os.getenv(nome)]
@@ -53,7 +53,7 @@ def carregar_segredos():
 
 
 def baixar_feed(url):
-    """Baixa e retorna o feed RSS como um objeto feedparser."""
+    """Baixa e retorna o feed RSS como um objeto feedparser"""
     try:
         resposta = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=TIMEOUT)
         resposta.raise_for_status()
@@ -64,7 +64,7 @@ def baixar_feed(url):
     return resposta.content
 
 def extrair_noticias(conteudo, setor):
-    """Extrai notícias do feed RSS e retorna uma lista de objetos Noticia."""
+    """Extrai notícias do feed RSS e retorna uma lista de objetos Noticia"""
     feed = feedparser.parse(conteudo)
 
     if feed.bozo and not feed.entries:
@@ -93,6 +93,19 @@ def extrair_noticias(conteudo, setor):
 
     return noticias
 
+def coletar_todas(setores):
+    """Percorre todos os feeds de todos os setores e junta as notícias"""
+    todas = []
+
+    for setor, urls in setores.items():
+        for url in urls:
+            conteudo = baixar_feed(url)
+            if conteudo is not None:
+                todas.extend(extrair_noticias(conteudo, setor))
+            time.sleep(PAUSA_ENTRE_FEEDS)
+
+    return todas
+
 
 def main():
     segredos = carregar_segredos()
@@ -102,9 +115,15 @@ def main():
         print(f"  {nome}: carregada ({len(valor)} caracteres)")
 
     print(f"\nFuso: {FUSO_HORARIO} | Envio às {HORARIO_DO_ENVIO}")
-    print(f"Setores ({len(SETORES)}):")
-    for setor, feeds in SETORES.items():
-        print(f"  - {setor}: {len(feeds)} feed(s)")
+
+    print("Coletando notícias...")
+    noticias = coletar_todas(SETORES)
+
+    for setor in SETORES:
+        do_setor = [n for n in noticias if n.setor == setor]
+        print(f"\n{setor}: {len(do_setor)} notícias coletadas")
+        for noticia in do_setor[:3]:
+            print(f"  - {noticia.titulo} ({noticia.fonte})")
 
 
 if __name__ == "__main__":

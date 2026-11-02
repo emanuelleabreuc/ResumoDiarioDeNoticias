@@ -131,6 +131,15 @@ def converter_data(struct):
         return None
     return datetime(*struct[:6], tzinfo=timezone.utc) #pega os 6 primeiros campos do struct_time: (ano, mês, dia, hora, minuto, segundo); o * desempacota; tzinfo=timezone.utc O tzinfo=timezone.utc marca a data como UTC, o que permite compará-la com o limite e convertê-la para o horário de Brasília
 
+def filtrar_recentes(noticias, horas):
+    """Filtra notícias publicadas nas últimas 'horas' horas"""
+    limite = datetime.now(timezone.utc) - timedelta(hours=horas)
+    recentes = []
+    for noticia in noticias:
+        data = converter_data(noticia.publicada_em)
+        if data is not None and data >= limite:
+            recentes.append(noticia)
+    return recentes
 
 
 

@@ -63,6 +63,37 @@ def baixar_feed(url):
 
     return resposta.content
 
+def extrair_noticias(conteudo, setor):
+    """Extrai notícias do feed RSS e retorna uma lista de objetos Noticia."""
+    feed = feedparser.parse(conteudo)
+
+    if feed.bozo and not feed.entries:
+        print(f" [aviso] feed inválido em '{setor}': {feed.bozo_exception}")
+        return []
+
+    fonte_do_feed = feed.feed.get("title", "Fonte desconhecida")
+    noticias = []
+
+    for entrada in feed.entries:
+        titulo = entrada.get("title", "").strip()
+        link = entrada.get("link", "").strip()
+        if not titulo or not link:
+            continue
+
+        noticias.append(
+            Noticia(
+                setor=setor,
+                titulo=titulo,
+                link=link,
+                resumo=entrada.get("summary", ""),
+                fonte=entrada.get("source", {}).get("title") or fonte_do_feed,
+                publicada_em=entrada.get("published_parsed") or entrada.get("updated_parsed"),
+            )
+        )
+
+    return noticias
+
+
 def main():
     segredos = carregar_segredos()
 

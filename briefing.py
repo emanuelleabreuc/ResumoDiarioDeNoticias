@@ -126,5 +126,13 @@ def main():
             print(f"  - {noticia.titulo} ({noticia.fonte})")
 
 
+def converter_data(struct):
+    if struct is None:
+        return None
+    return datetime(*struct[:6], tzinfo=timezone.utc) #pega os 6 primeiros campos do struct_time: (ano, mês, dia, hora, minuto, segundo); o * desempacota; tzinfo=timezone.utc O tzinfo=timezone.utc marca a data como UTC, o que permite compará-la com o limite e convertê-la para o horário de Brasília
+
+
+
+
 if __name__ == "__main__":
     main()

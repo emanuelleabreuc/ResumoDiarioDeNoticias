@@ -141,6 +141,17 @@ def filtrar_recentes(noticias, horas):
             recentes.append(noticia)
     return recentes
 
+def remover_duplicadas(noticias):
+    """Remove notícias duplicadas com base no título e link"""
+    vistas = set()
+    unicas = []
+    for noticia in noticias:
+        chave = noticia.titulo.rsplit(" - ", 1)[0].lower().strip()
+        if chave not in vistas:
+            vistas.add(chave)
+            unicas.append(noticia)
+    return unicas
+
 
 
 if __name__ == "__main__":

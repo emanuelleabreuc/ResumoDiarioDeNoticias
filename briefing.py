@@ -20,7 +20,7 @@ SETORES = {
     "Economia": ["https://g1.globo.com/rss/g1/economia/"],
 }
 
-VARIAVEIS_OBRIGATORIAS = [ "GEMINI_API_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID" ]
+VARIAVEIS_OBRIGATORIAS = [ "GEMINI_API_KEY", "TELEGRAM_TOKEN", "TELEGRAM_CHAT_ID" ]
 
 FUSO_HORARIO = ZoneInfo("America/Sao_Paulo")
 HORARIO_DO_ENVIO = "09:00"
@@ -143,6 +143,20 @@ def limpar_html(texto):
     limpo = " ".join(sem_entidades.split())
     return limpo[:MAX_CARACTERES_RESUMO]
 
+def agrupar_por_setor(noticias, setores, maximo):
+    """Separa as notícias por setor, da mais recente para a mais antiga, até 'maximo' por setor"""
+    por_setor = {setor: [] for setor in setores}
+
+    for noticia in noticias:
+        if noticia.setor in por_setor:
+            por_setor[noticia.setor].append(noticia)
+
+    for setor, lista in por_setor.items():
+        ordenada = sorted(lista, key=lambda n: converter_data(n.publicada_em), reverse=True)
+        por_setor[setor] = ordenada[:maximo]
+
+    return por_setor
+
 
 
 
@@ -174,13 +188,12 @@ def main():
         noticia.resumo = limpar_html(noticia.resumo)
 
     
-    for setor in SETORES:
-        do_setor = [n for n in noticias if n.setor == setor]
-        print(f"\n{setor}: {len(do_setor)} notícias")
-        for noticia in do_setor[:3]:
+    noticias_por_setor = agrupar_por_setor(noticias, SETORES, MAX_NOTICIAS_POR_SETOR)
+    for setor, lista in noticias_por_setor.items():
+        print(f"\n{setor}: {len(lista)} notícias")
+        for noticia in lista:
             print(f"  - {noticia.titulo} ({noticia.fonte})")
             print(f"    {noticia.resumo}")
-
 
 
 

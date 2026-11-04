@@ -20,7 +20,7 @@ SETORES = {
     "Economia": ["https://g1.globo.com/rss/g1/economia/"],
 }
 
-VARIAVEIS_OBRIGATORIAS = [ "GEMINI_API_KEY" ]
+VARIAVEIS_OBRIGATORIAS = [ "GEMINI_API_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID" ]
 
 FUSO_HORARIO = ZoneInfo("America/Sao_Paulo")
 HORARIO_DO_ENVIO = "09:00"
@@ -56,7 +56,7 @@ def carregar_segredos():
 
 
 def baixar_feed(url):
-    """Baixa e retorna o feed RSS como um objeto feedparser"""
+    """Baixa o feed RSS e retorna o conteúdo ou None se houver erro"""
     try:
         resposta = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=TIMEOUT)
         resposta.raise_for_status()
@@ -126,7 +126,7 @@ def filtrar_recentes(noticias, horas):
     return recentes
 
 def remover_duplicadas(noticias):
-    """Remove notícias duplicadas com base no título e link"""
+    """Remove notícias duplicadas com base no título"""
     vistas = set()
     unicas = []
     for noticia in noticias:
@@ -142,6 +142,8 @@ def limpar_html(texto):
     sem_entidades = html.unescape(sem_tags)
     limpo = " ".join(sem_entidades.split())
     return limpo[:MAX_CARACTERES_RESUMO]
+
+
 
 
 

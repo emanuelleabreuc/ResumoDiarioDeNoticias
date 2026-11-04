@@ -160,19 +160,22 @@ def agrupar_por_setor(noticias, setores, maximo):
     return por_setor
 
 def enviar_telegram(texto, token, chat_id):
-    """Envia a mensagem para o Telegram"""
+    """Envia a mensagem para o Telegram e retorna True se deu certo"""
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     dados = {
         "chat_id": chat_id,
         "text": texto,
         "parse_mode": "HTML",
-        "disable_web_page_preview": {"is_disabled": True},
+        "link_preview_options": {"is_disabled": True},
     }
     try:
         resposta = requests.post(url, json=dados, timeout=TIMEOUT)
         resposta.raise_for_status()
     except requests.RequestException as erro:
-        print(f"Erro ao enviar mensagem para o Telegram: {erro}")
+        if erro.response is not None:
+            print(f"Erro do Telegram ({erro.response.status_code}): {erro.response.text}")
+        else:
+            print(f"Erro de conexão com o Telegram: {type(erro).__name__}")
         return False
 
     return True
@@ -288,59 +291,35 @@ def formatar_mensagem(noticias_por_setor, resumos):
 def main():
     segredos = carregar_segredos()
 
-    print("Configuração carregada:")
-    for nome, valor in segredos.items():
-        print(f"  {nome}: carregada ({len(valor)} caracteres)")
-
-    print(f"\nFuso: {FUSO_HORARIO} | Envio às {HORARIO_DO_ENVIO}")
-
-    
-    print("\nColetando notícias...")
+    print("Coletando notícias...")
     noticias = coletar_todas(SETORES)
     print(f"  {len(noticias)} notícias coletadas")
 
-    
     noticias = filtrar_recentes(noticias, JANELA_HORAS)
     print(f"  {len(noticias)} publicadas nas últimas {JANELA_HORAS}h")
 
-    
     noticias = remover_duplicadas(noticias)
     print(f"  {len(noticias)} após remover duplicadas")
 
-    
     for noticia in noticias:
         noticia.resumo = limpar_html(noticia.resumo)
 
-    
     noticias_por_setor = agrupar_por_setor(noticias, SETORES, MAX_NOTICIAS_POR_SETOR)
     for setor, lista in noticias_por_setor.items():
-        print(f"\n{setor}: {len(lista)} notícias")
-        for noticia in lista:
-            print(f"  - {noticia.titulo} ({noticia.fonte})")
-            print(f"    {noticia.resumo}")
-
-    
-        print("\nEnviando mensagem de teste...")
-    enviado = enviar_mensagem(
-        "Olá do <b>Resumo Diário</b>! 📰",
-        segredos["TELEGRAM_TOKEN"],
-        segredos["TELEGRAM_CHAT_ID"],
-    )
-    print("  Enviado!" if enviado else "  Falhou.")
+        print(f"  {setor}: {len(lista)} selecionadas")
 
     print("\nGerando resumos com IA...")
     cliente = genai.Client(api_key=segredos["GEMINI_API_KEY"])
     resumos = resumir_todos(cliente, noticias_por_setor)
 
-    for setor, resumo in resumos.items():
-        print(f"\n[{setor}] {resumo}")
-
-        mensagem = formatar_mensagem(noticias_por_setor, resumos)
-    print("\n" + mensagem)
+    mensagem = formatar_mensagem(noticias_por_setor, resumos)
 
     print("\nEnviando para o Telegram...")
     enviado = enviar_mensagem(mensagem, segredos["TELEGRAM_TOKEN"], segredos["TELEGRAM_CHAT_ID"])
-    print("  Enviado!" if enviado else "  Falhou.")
+    if not enviado:
+        sys.exit("Falha ao enviar o resumo para o Telegram.")
+
+    print("  Resumo enviado!")
 
 
 if __name__ == "__main__":

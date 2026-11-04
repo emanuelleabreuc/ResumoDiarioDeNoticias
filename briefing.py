@@ -157,6 +157,24 @@ def agrupar_por_setor(noticias, setores, maximo):
 
     return por_setor
 
+def enviar_telegram(texto, token, chat_id):
+    """Envia a mensagem para o Telegram"""
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    dados = {
+        "chat_id": chat_id,
+        "text": texto,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": {"is_disabled": True},
+    }
+    try:
+        resposta = requests.post(url, json=dados, timeout=TIMEOUT)
+        resposta.raise_for_status()
+    except requests.RequestException as erro:
+        print(f"Erro ao enviar mensagem para o Telegram: {erro}")
+        return False
+
+    return True
+
 
 
 
@@ -194,6 +212,8 @@ def main():
         for noticia in lista:
             print(f"  - {noticia.titulo} ({noticia.fonte})")
             print(f"    {noticia.resumo}")
+
+    
 
 
 

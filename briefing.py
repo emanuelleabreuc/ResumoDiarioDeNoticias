@@ -32,6 +32,8 @@ MAX_CARACTERES_RESUMO = 300
 USER_AGENT = "ResumoDiarioDeNoticias/1.0 (projeto pessoal)"
 TIMEOUT = 10  # segundos
 PAUSA_ENTRE_FEEDS = 1  # segundos
+MODELO_GEMINI = "gemini-3.6-flash"
+PAUSA_ENTRE_CHAMADAS_IA = 2  # segundos
 
 @dataclass
 class Noticia:
@@ -202,6 +204,51 @@ def enviar_mensagem(texto, token, chat_id):
             tudo_certo = False
     return tudo_certo
 
+def montar_prompt(setor, noticias):
+    """Monta o texto enviado à IA com as notícias de um setor"""
+    linhas = []
+    for i, noticia in enumerate(noticias, start=1):
+        linhas.append(f"{i}. {noticia.titulo} — {noticia.resumo}")
+    lista = "\n".join(linhas)
+
+    return (
+        "Você é um editor de jornal que escreve resumos curtos e objetivos.\n\n"
+        f"Escreva em português do Brasil um panorama de 2 a 3 frases sobre as notícias "
+        f"de {setor} abaixo, destacando o que é mais importante.\n\n"
+        "Regras:\n"
+        "- Use apenas as informações fornecidas, não invente fatos.\n"
+        "- Responda só com texto puro: sem markdown, sem asteriscos, sem títulos, sem listas.\n\n"
+        f"Notícias:\n{lista}"
+    )
+
+def resumir_setor(cliente, setor, noticias):
+    """Pede à IA um panorama do setor; retorna o texto ou None se não houver notícias ou der erro"""
+    if not noticias:
+        return None
+
+    prompt = montar_prompt(setor, noticias)
+
+    try:
+        resposta = cliente.models.generate_content(model=MODELO_GEMINI, contents=prompt)
+    except Exception as erro:
+        print(f"  [aviso] IA falhou em '{setor}': {erro}")
+        return None
+
+    if not resposta.text:
+        print(f"  [aviso] IA não devolveu texto em '{setor}'")
+        return None
+
+    return resposta.text.replace("*", "").strip()
+
+
+def resumir_todos(cliente, noticias_por_setor):
+    """Gera o panorama de cada setor e retorna {setor: texto ou None}"""
+    resumos = {}
+    for setor, noticias in noticias_por_setor.items():
+        resumos[setor] = resumir_setor(cliente, setor, noticias)
+        if noticias:
+            time.sleep(PAUSA_ENTRE_CHAMADAS_IA)
+    return resumos
 
 
 def main():
@@ -246,6 +293,13 @@ def main():
         segredos["TELEGRAM_CHAT_ID"],
     )
     print("  Enviado!" if enviado else "  Falhou.")
+
+    print("\nGerando resumos com IA...")
+    cliente = genai.Client(api_key=segredos["GEMINI_API_KEY"])
+    resumos = resumir_todos(cliente, noticias_por_setor)
+
+    for setor, resumo in resumos.items():
+        print(f"\n[{setor}] {resumo}")
 
 
 if __name__ == "__main__":

@@ -110,25 +110,6 @@ def coletar_todas(setores):
     return todas
 
 
-def main():
-    segredos = carregar_segredos()
-
-    print("Configuração carregada:")
-    for nome, valor in segredos.items():
-        print(f"  {nome}: carregada ({len(valor)} caracteres)")
-
-    print(f"\nFuso: {FUSO_HORARIO} | Envio às {HORARIO_DO_ENVIO}")
-
-    print("Coletando notícias...")
-    noticias = coletar_todas(SETORES)
-
-    for setor in SETORES:
-        do_setor = [n for n in noticias if n.setor == setor]
-        print(f"\n{setor}: {len(do_setor)} notícias coletadas")
-        for noticia in do_setor[:3]:
-            print(f"  - {noticia.titulo} ({noticia.fonte})")
-
-
 def converter_data(struct):
     if struct is None:
         return None
@@ -161,6 +142,43 @@ def limpar_html(texto):
     sem_entidades = html.unescape(sem_tags)
     limpo = " ".join(sem_entidades.split())
     return limpo[:MAX_CARACTERES_RESUMO]
+
+
+
+def main():
+    segredos = carregar_segredos()
+
+    print("Configuração carregada:")
+    for nome, valor in segredos.items():
+        print(f"  {nome}: carregada ({len(valor)} caracteres)")
+
+    print(f"\nFuso: {FUSO_HORARIO} | Envio às {HORARIO_DO_ENVIO}")
+
+    
+    print("\nColetando notícias...")
+    noticias = coletar_todas(SETORES)
+    print(f"  {len(noticias)} notícias coletadas")
+
+    
+    noticias = filtrar_recentes(noticias, JANELA_HORAS)
+    print(f"  {len(noticias)} publicadas nas últimas {JANELA_HORAS}h")
+
+    
+    noticias = remover_duplicadas(noticias)
+    print(f"  {len(noticias)} após remover duplicadas")
+
+    
+    for noticia in noticias:
+        noticia.resumo = limpar_html(noticia.resumo)
+
+    
+    for setor in SETORES:
+        do_setor = [n for n in noticias if n.setor == setor]
+        print(f"\n{setor}: {len(do_setor)} notícias")
+        for noticia in do_setor[:3]:
+            print(f"  - {noticia.titulo} ({noticia.fonte})")
+            print(f"    {noticia.resumo}")
+
 
 
 

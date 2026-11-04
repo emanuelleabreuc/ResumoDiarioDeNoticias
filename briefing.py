@@ -175,7 +175,32 @@ def enviar_telegram(texto, token, chat_id):
 
     return True
 
+def dividir_mensagem(texto, limite=4000):
+    """Quebra o texto em pedaços de até 'limite' caracteres, sem cortar blocos no meio"""
+    pedacos = []
+    atual = ""
 
+    for bloco in texto.split("\n\n"):
+        candidato = f"{atual}\n\n{bloco}" if atual else bloco
+        if len(candidato) <= limite:
+            atual = candidato
+        else:
+            if atual:
+                pedacos.append(atual)
+            atual = bloco
+
+    if atual:
+        pedacos.append(atual)
+
+    return pedacos
+
+def enviar_mensagem(texto, token, chat_id):
+    """Divide a mensagem se necessário e envia cada pedaço; retorna True se tudo foi enviado"""
+    tudo_certo = True
+    for pedaco in dividir_mensagem(texto):
+        if not enviar_telegram(pedaco, token, chat_id):
+            tudo_certo = False
+    return tudo_certo
 
 
 
@@ -214,7 +239,13 @@ def main():
             print(f"    {noticia.resumo}")
 
     
-
+        print("\nEnviando mensagem de teste...")
+    enviado = enviar_mensagem(
+        "Olá do <b>Resumo Diário</b>! 📰",
+        segredos["TELEGRAM_BOT_TOKEN"],
+        segredos["TELEGRAM_CHAT_ID"],
+    )
+    print("  Enviado!" if enviado else "  Falhou.")
 
 
 if __name__ == "__main__":

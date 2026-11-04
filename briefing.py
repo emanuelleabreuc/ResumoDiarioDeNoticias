@@ -27,7 +27,7 @@ HORARIO_DO_ENVIO = "09:00"
 JANELA_HORAS = 24
 MAX_NOTICIAS_POR_SETOR = 5
 MAX_CARACTERES_RESUMO = 300
-
+EMOJIS = {"Tecnologia": "💻", "Economia": "📈"}
 
 USER_AGENT = "ResumoDiarioDeNoticias/1.0 (projeto pessoal)"
 TIMEOUT = 10  # segundos
@@ -250,6 +250,40 @@ def resumir_todos(cliente, noticias_por_setor):
             time.sleep(PAUSA_ENTRE_CHAMADAS_IA)
     return resumos
 
+def formatar_noticia(noticia):
+    """Monta a linha de uma notícia: título com link e a fonte"""
+    titulo = html.escape(noticia.titulo)
+    fonte = html.escape(noticia.fonte)
+    link = html.escape(noticia.link)
+    return f'• <a href="{link}">{titulo}</a> — {fonte}'
+
+def formatar_setor(setor, noticias, resumo):
+    """Monta o bloco de um setor: título, panorama da IA e manchetes"""
+    emoji = EMOJIS.get(setor, "📌")
+    linhas = [f"{emoji} <b>{html.escape(setor)}</b>"]
+
+    if not noticias:
+        linhas.append("Sem novidades nas últimas 24h.")
+        return "\n".join(linhas)
+
+    if resumo:
+        resumo_limpo = " ".join(resumo.split())
+        linhas.append(f"<i>{html.escape(resumo_limpo)}</i>")
+
+    for noticia in noticias:
+        linhas.append(formatar_noticia(noticia))
+
+    return "\n".join(linhas)
+
+def formatar_mensagem(noticias_por_setor, resumos):
+    """Junta o cabeçalho com a data e os blocos de todos os setores"""
+    data = datetime.now(FUSO_HORARIO).strftime("%d/%m/%Y")
+    blocos = [f"📰 <b>Resumo do dia — {data}</b>"]
+
+    for setor, noticias in noticias_por_setor.items():
+        blocos.append(formatar_setor(setor, noticias, resumos.get(setor)))
+
+    return "\n\n".join(blocos)
 
 def main():
     segredos = carregar_segredos()
@@ -289,7 +323,7 @@ def main():
         print("\nEnviando mensagem de teste...")
     enviado = enviar_mensagem(
         "Olá do <b>Resumo Diário</b>! 📰",
-        segredos["TELEGRAM_BOT_TOKEN"],
+        segredos["TELEGRAM_TOKEN"],
         segredos["TELEGRAM_CHAT_ID"],
     )
     print("  Enviado!" if enviado else "  Falhou.")
@@ -300,6 +334,13 @@ def main():
 
     for setor, resumo in resumos.items():
         print(f"\n[{setor}] {resumo}")
+
+        mensagem = formatar_mensagem(noticias_por_setor, resumos)
+    print("\n" + mensagem)
+
+    print("\nEnviando para o Telegram...")
+    enviado = enviar_mensagem(mensagem, segredos["TELEGRAM_TOKEN"], segredos["TELEGRAM_CHAT_ID"])
+    print("  Enviado!" if enviado else "  Falhou.")
 
 
 if __name__ == "__main__":

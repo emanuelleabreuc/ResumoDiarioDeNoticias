@@ -14,9 +14,9 @@ O fluxo completo tem 7 passos. Os 4 primeiros já estão feitos em `briefing.py`
 [2] Filtrar últimas 24h      ✅ converter_data, filtrar_recentes
 [3] Remover duplicadas       ✅ remover_duplicadas
 [4] Limpar HTML do resumo    ✅ limpar_html
-[5] Selecionar por setor     ⬜ ordenar por data + limitar a MAX_NOTICIAS_POR_SETOR
+[5] Selecionar por setor     ✅ ordenar por data + limitar a MAX_NOTICIAS_POR_SETOR
 [6] Resumir com IA           ⬜ Gemini
-[7] Formatar e enviar        ⬜ Telegram
+[7] Formatar e enviar        ✅ Telegram
 [+] Rodar todo dia às 9h     ⬜ agendamento (GitHub Actions)
 ```
 

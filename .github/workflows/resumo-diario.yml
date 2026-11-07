@@ -2,12 +2,13 @@ name: Resumo diário
 
 on:
   schedule:
-    - cron: "0 12 * * *"   
-  workflow_dispatch:        
+    - cron: "0 12 * * *"
+  workflow_dispatch:
 
 jobs:
   enviar:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

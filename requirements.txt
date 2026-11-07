@@ -1,5 +1,5 @@
-google-genai
-python-dotenv
-requests
-feedparser
+google-genai>=3.0,<4
+python-dotenv>=1.2,<2
+requests>=2.34,<3
+feedparser>=6.0,<7
 tzdata

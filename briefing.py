@@ -13,8 +13,6 @@ from dotenv import load_dotenv
 from google import genai
 
 
-
-
 SETORES = {
     "Tecnologia": ["https://g1.globo.com/rss/g1/tecnologia/"],
     "Economia": ["https://g1.globo.com/rss/g1/economia/"],
@@ -23,7 +21,6 @@ SETORES = {
 VARIAVEIS_OBRIGATORIAS = [ "GEMINI_API_KEY", "TELEGRAM_TOKEN", "TELEGRAM_CHAT_ID" ]
 
 FUSO_HORARIO = ZoneInfo("America/Sao_Paulo")
-HORARIO_DO_ENVIO = "09:00"
 JANELA_HORAS = 24
 MAX_NOTICIAS_POR_SETOR = 5
 MAX_CARACTERES_RESUMO = 300
@@ -35,6 +32,7 @@ PAUSA_ENTRE_FEEDS = 1  # segundos
 MODELO_GEMINI = "gemini-3.6-flash"
 PAUSA_ENTRE_CHAMADAS_IA = 2  # segundos
 
+
 @dataclass
 class Noticia:
     setor: str
@@ -43,7 +41,6 @@ class Noticia:
     resumo: str
     fonte: str
     publicada_em: time.struct_time | None
-
 
 
 def carregar_segredos():
@@ -67,6 +64,7 @@ def baixar_feed(url):
         return None
 
     return resposta.content
+
 
 def extrair_noticias(conteudo, setor):
     """Extrai notícias do feed RSS e retorna uma lista de objetos Noticia"""
@@ -98,6 +96,7 @@ def extrair_noticias(conteudo, setor):
 
     return noticias
 
+
 def coletar_todas(setores):
     """Percorre todos os feeds de todos os setores e junta as notícias"""
     todas = []
@@ -113,9 +112,12 @@ def coletar_todas(setores):
 
 
 def converter_data(struct):
+    """Converte o struct_time do feed em datetime marcado como UTC (ou None)"""
     if struct is None:
         return None
-    return datetime(*struct[:6], tzinfo=timezone.utc) #pega os 6 primeiros campos do struct_time: (ano, mês, dia, hora, minuto, segundo); o * desempacota; tzinfo=timezone.utc O tzinfo=timezone.utc marca a data como UTC, o que permite compará-la com o limite e convertê-la para o horário de Brasília
+    # (ano, mês, dia, hora, minuto, segundo) — o UTC permite comparar com o limite
+    return datetime(*struct[:6], tzinfo=timezone.utc)
+
 
 def filtrar_recentes(noticias, horas):
     """Filtra notícias publicadas nas últimas 'horas' horas"""
@@ -126,6 +128,7 @@ def filtrar_recentes(noticias, horas):
         if data is not None and data >= limite:
             recentes.append(noticia)
     return recentes
+
 
 def remover_duplicadas(noticias):
     """Remove notícias duplicadas com base no título"""
@@ -138,12 +141,14 @@ def remover_duplicadas(noticias):
             unicas.append(noticia)
     return unicas
 
+
 def limpar_html(texto):
     """Remove tags e entidades HTML, junta espaços e corta o tamanho."""
     sem_tags = re.sub(r"<[^>]+>", " ", texto)
     sem_entidades = html.unescape(sem_tags)
     limpo = " ".join(sem_entidades.split())
     return limpo[:MAX_CARACTERES_RESUMO]
+
 
 def agrupar_por_setor(noticias, setores, maximo):
     """Separa as notícias por setor, da mais recente para a mais antiga, até 'maximo' por setor"""
@@ -158,6 +163,7 @@ def agrupar_por_setor(noticias, setores, maximo):
         por_setor[setor] = ordenada[:maximo]
 
     return por_setor
+
 
 def enviar_telegram(texto, token, chat_id):
     """Envia a mensagem para o Telegram e retorna True se deu certo"""
@@ -180,24 +186,43 @@ def enviar_telegram(texto, token, chat_id):
 
     return True
 
+
 def dividir_mensagem(texto, limite=4000):
     """Quebra o texto em pedaços de até 'limite' caracteres, sem cortar blocos no meio"""
+    return _agrupar_partes(texto.split("\n\n"), "\n\n", limite)
+
+
+def _agrupar_partes(partes, separador, limite):
+    """Junta partes com 'separador' sem passar de 'limite'; quebra partes grandes demais"""
     pedacos = []
     atual = ""
 
-    for bloco in texto.split("\n\n"):
-        candidato = f"{atual}\n\n{bloco}" if atual else bloco
+    for parte in partes:
+        if len(parte) > limite:
+            if atual:
+                pedacos.append(atual)
+                atual = ""
+            if separador == "\n\n":
+                # bloco grande demais: tenta quebrar por linha
+                pedacos.extend(_agrupar_partes(parte.split("\n"), "\n", limite))
+            else:
+                # linha grande demais: corta no tamanho máximo
+                pedacos.extend(parte[i:i + limite] for i in range(0, len(parte), limite))
+            continue
+
+        candidato = f"{atual}{separador}{parte}" if atual else parte
         if len(candidato) <= limite:
             atual = candidato
         else:
             if atual:
                 pedacos.append(atual)
-            atual = bloco
+            atual = parte
 
     if atual:
         pedacos.append(atual)
 
     return pedacos
+
 
 def enviar_mensagem(texto, token, chat_id):
     """Divide a mensagem se necessário e envia cada pedaço; retorna True se tudo foi enviado"""
@@ -206,6 +231,7 @@ def enviar_mensagem(texto, token, chat_id):
         if not enviar_telegram(pedaco, token, chat_id):
             tudo_certo = False
     return tudo_certo
+
 
 def montar_prompt(setor, noticias):
     """Monta o texto enviado à IA com as notícias de um setor"""
@@ -223,6 +249,7 @@ def montar_prompt(setor, noticias):
         "- Responda só com texto puro: sem markdown, sem asteriscos, sem títulos, sem listas.\n\n"
         f"Notícias:\n{lista}"
     )
+
 
 def resumir_setor(cliente, setor, noticias):
     """Pede à IA um panorama do setor; retorna o texto ou None se não houver notícias ou der erro"""
@@ -253,6 +280,7 @@ def resumir_todos(cliente, noticias_por_setor):
             time.sleep(PAUSA_ENTRE_CHAMADAS_IA)
     return resumos
 
+
 def formatar_noticia(noticia):
     """Monta a linha de uma notícia: título com link e a fonte"""
     titulo = html.escape(noticia.titulo)
@@ -260,13 +288,14 @@ def formatar_noticia(noticia):
     link = html.escape(noticia.link)
     return f'• <a href="{link}">{titulo}</a> — {fonte}'
 
+
 def formatar_setor(setor, noticias, resumo):
     """Monta o bloco de um setor: título, panorama da IA e manchetes"""
     emoji = EMOJIS.get(setor, "📌")
     linhas = [f"{emoji} <b>{html.escape(setor)}</b>"]
 
     if not noticias:
-        linhas.append("Sem novidades nas últimas 24h.")
+        linhas.append(f"Sem novidades nas últimas {JANELA_HORAS}h.")
         return "\n".join(linhas)
 
     if resumo:
@@ -278,6 +307,7 @@ def formatar_setor(setor, noticias, resumo):
 
     return "\n".join(linhas)
 
+
 def formatar_mensagem(noticias_por_setor, resumos):
     """Junta o cabeçalho com a data e os blocos de todos os setores"""
     data = datetime.now(FUSO_HORARIO).strftime("%d/%m/%Y")
@@ -288,12 +318,15 @@ def formatar_mensagem(noticias_por_setor, resumos):
 
     return "\n\n".join(blocos)
 
+
 def main():
     segredos = carregar_segredos()
 
     print("Coletando notícias...")
     noticias = coletar_todas(SETORES)
     print(f"  {len(noticias)} notícias coletadas")
+    if not noticias:
+        sys.exit("Nenhuma notícia coletada: todos os feeds falharam ou estão vazios.")
 
     noticias = filtrar_recentes(noticias, JANELA_HORAS)
     print(f"  {len(noticias)} publicadas nas últimas {JANELA_HORAS}h")
